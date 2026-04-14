@@ -1,0 +1,21 @@
+@model StudentEditModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label fw-semibold">Full Name</label>
+    <input asp-for="Name" class="form-control" placeholder="Jane Doe" />
+    <span asp-validation-for="Name" class="text-danger small"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Email" class="form-label fw-semibold">Email</label>
+    <input asp-for="Email" class="form-control" placeholder="student@example.com" />
+    <span asp-validation-for="Email" class="text-danger small"></span>
+</div>
+<div class="mb-3">
+    <label asp-for="Phone" class="form-label fw-semibold">Phone <small class="text-muted">(optional)</small></label>
+    <input asp-for="Phone" class="form-control" placeholder="555-555-5555" />
+    <span asp-validation-for="Phone" class="text-danger small"></span>
+</div>
+<div class="mb-4">
+    <label asp-for="Notes" class="form-label fw-semibold">Notes <small class="text-muted">(optional)</small></label>
+    <textarea asp-for="Notes" class="form-control" rows="2" placeholder="PPL student, instrument training..."></textarea>
+</div>

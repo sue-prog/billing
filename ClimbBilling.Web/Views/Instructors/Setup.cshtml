@@ -1,0 +1,51 @@
+@model InstructorSetupModel
+@{
+    ViewData["Title"] = "Set Up Your Profile";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-person-plus me-2"></i>Set Up Your Billing Profile</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">Enter your information to get started. You can update this at any time.</p>
+                <form asp-action="Setup" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="DisplayName" class="form-label fw-semibold">Your Name</label>
+                        <input asp-for="DisplayName" class="form-control" placeholder="John Smith" />
+                        <span asp-validation-for="DisplayName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="BusinessName" class="form-label fw-semibold">Business Name <small class="text-muted">(optional)</small></label>
+                        <input asp-for="BusinessName" class="form-control" placeholder="Smith Flight Training" />
+                        <span asp-validation-for="BusinessName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                        <input asp-for="Email" class="form-control" placeholder="you@example.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Phone" class="form-label fw-semibold">Phone <small class="text-muted">(optional)</small></label>
+                        <input asp-for="Phone" class="form-control" placeholder="555-555-5555" />
+                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-arrow-right me-1"></i>Create Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

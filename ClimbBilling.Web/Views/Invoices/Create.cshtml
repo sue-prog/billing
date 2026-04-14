@@ -1,0 +1,200 @@
+@using ClimbBilling.Web.Models.Entities
+@model ClimbBilling.Web.Models.ViewModels.CreateInvoiceViewModel
+@{
+    ViewData["Title"] = "New Invoice";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="h4 mb-0"><i class="bi bi-plus-circle me-2"></i>New Invoice</h2>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+</div>
+
+<form asp-action="Create" method="post" id="invoiceForm">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="row g-4">
+        @* Left column — invoice header *@
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Invoice Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="StudentId" class="form-label fw-semibold">Student</label>
+                        <select asp-for="StudentId" class="form-select"
+                                asp-items="@(new SelectList(Model.Students, "Id", "Name"))">
+                            <option value="">— Select student —</option>
+                        </select>
+                        <span asp-validation-for="StudentId" class="text-danger small"></span>
+                        <a asp-controller="Students" asp-action="Create" class="small mt-1 d-inline-block">+ Add new student</a>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="InvoiceDate" class="form-label fw-semibold">Invoice Date</label>
+                        <input asp-for="InvoiceDate" class="form-control" type="date" />
+                        <span asp-validation-for="InvoiceDate" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DueDate" class="form-label fw-semibold">Due Date <small class="text-muted">(optional)</small></label>
+                        <input asp-for="DueDate" class="form-control" type="date" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label fw-semibold">Notes <small class="text-muted">(optional)</small></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"
+                                  placeholder="Lesson notes, aircraft N-number, etc."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Right column — line items *@
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Line Items</h6>
+                    @if (Model.Rates.Any())
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                                    data-bs-toggle="dropdown">
+                                <i class="bi bi-plus-lg me-1"></i>Add from Rate
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" style="min-width:260px;">
+                                @foreach (var rate in Model.Rates)
+                                {
+                                    <li>
+                                        <a class="dropdown-item" href="#"
+                                           onclick="addRateLineItem('@rate.Label', @rate.HourlyRate, '@rate.Type'); return false;">
+                                            @rate.Label <span class="text-muted small">$@rate.HourlyRate.ToString("N2")/hr</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+                <div class="card-body">
+
+                    <div id="lineItemsContainer">
+                        @for (int i = 0; i < Model.LineItems.Count; i++)
+                        {
+                            @await Html.PartialAsync("_LineItemRow", (Model.LineItems[i], i))
+                        }
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <a href="#" class="btn btn-sm btn-outline-secondary" onclick="addBlankLineItem(); return false;">
+                            <i class="bi bi-plus me-1"></i>Add Line Item
+                        </a>
+                    </div>
+
+                    <hr />
+                    <div class="text-end">
+                        <strong>Total: </strong>
+                        <span id="invoiceTotal" class="h5 ms-2">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-save me-1"></i>Create Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@* Line item row template (hidden, cloned by JS) *@
+<template id="lineItemTemplate">
+    __PARTIAL__
+</template>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let lineItemIndex = @Model.LineItems.Count;
+
+        function addBlankLineItem() {
+            addLineItem('', 1, 0.00, 'Instruction', '');
+        }
+
+        function addRateLineItem(label, rate, type) {
+            addLineItem(label, 1, rate, type, '');
+        }
+
+        function addLineItem(description, qty, price, type, serviceDate) {
+            const idx = lineItemIndex++;
+            const container = document.getElementById('lineItemsContainer');
+            const div = document.createElement('div');
+            div.className = 'line-item-row border rounded p-3 mb-3';
+            div.innerHTML = buildLineItemHtml(idx, description, qty, price, type, serviceDate);
+            container.appendChild(div);
+            updateTotal();
+        }
+
+        function buildLineItemHtml(idx, description, qty, price, type, serviceDate) {
+            return `
+            <div class="row g-2 mb-2">
+                <div class="col-12">
+                    <input name="LineItems[${idx}].Description" class="form-control form-control-sm"
+                           placeholder="Description" value="${escHtml(description)}" required />
+                </div>
+            </div>
+            <div class="row g-2 align-items-center">
+                <div class="col-3">
+                    <label class="form-label form-label-sm text-muted mb-0">Hours</label>
+                    <input name="LineItems[${idx}].Quantity" type="number" step="0.1" min="0.1"
+                           class="form-control form-control-sm qty-input" value="${qty}" onchange="updateTotal()" required />
+                </div>
+                <div class="col-4">
+                    <label class="form-label form-label-sm text-muted mb-0">Rate ($/hr)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
+                        <input name="LineItems[${idx}].UnitPrice" type="number" step="0.01" min="0.01"
+                               class="form-control price-input" value="${price}" onchange="updateTotal()" required />
+                    </div>
+                </div>
+                <div class="col-4">
+                    <label class="form-label form-label-sm text-muted mb-0">Service Date</label>
+                    <input name="LineItems[${idx}].ServiceDate" type="date" class="form-control form-control-sm"
+                           value="${serviceDate}" />
+                </div>
+                <div class="col-1 d-flex align-items-end justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <input type="hidden" name="LineItems[${idx}].Type" value="${type}" />`;
+        }
+
+        function removeLineItem(btn) {
+            btn.closest('.line-item-row').remove();
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let total = 0;
+            document.querySelectorAll('.line-item-row').forEach(row => {
+                const qty = parseFloat(row.querySelector('.qty-input')?.value) || 0;
+                const price = parseFloat(row.querySelector('.price-input')?.value) || 0;
+                total += qty * price;
+            });
+            document.getElementById('invoiceTotal').textContent = '$' + total.toFixed(2);
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // Render existing items as proper rows
+        document.querySelectorAll('.existing-line-item').forEach(el => {
+            el.classList.add('line-item-row', 'border', 'rounded', 'p-3', 'mb-3');
+        });
+        updateTotal();
+    </script>
+}

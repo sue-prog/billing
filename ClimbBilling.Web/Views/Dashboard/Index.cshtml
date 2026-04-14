@@ -1,0 +1,170 @@
+@model ClimbBilling.Web.Models.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Welcome, @Model.InstructorName</h1>
+        <small class="text-muted">@DateTime.Today.ToString("MMMM d, yyyy")</small>
+    </div>
+    <a asp-controller="Invoices" asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>New Invoice
+    </a>
+</div>
+
+@if (!Model.StripeConnected)
+{
+    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-credit-card-2-front fs-4 me-3"></i>
+        <div>
+            <strong>Connect your Stripe account</strong> to accept credit card and ACH bank transfer payments from students.
+            <a asp-controller="Instructors" asp-action="StripeOnboard" class="btn btn-sm btn-outline-primary ms-3">
+                Connect Stripe
+            </a>
+        </div>
+    </div>
+}
+
+@* Stats cards *@
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small">Outstanding</div>
+                        <div class="h4 mb-0 text-danger">$@Model.OutstandingBalance.ToString("N2")</div>
+                    </div>
+                    <span class="text-danger fs-3"><i class="bi bi-hourglass-split"></i></span>
+                </div>
+                <div class="text-muted small mt-2">
+                    @Model.OpenInvoiceCount open invoice(s)
+                    @if (Model.OverdueInvoiceCount > 0)
+                    {
+                        <span class="badge bg-danger ms-1">@Model.OverdueInvoiceCount overdue</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small">Collected This Month</div>
+                        <div class="h4 mb-0 text-success">$@Model.PaidThisMonth.ToString("N2")</div>
+                    </div>
+                    <span class="text-success fs-3"><i class="bi bi-calendar3"></i></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small">Collected This Year</div>
+                        <div class="h4 mb-0">$@Model.PaidThisYear.ToString("N2")</div>
+                    </div>
+                    <span class="text-primary fs-3"><i class="bi bi-graph-up-arrow"></i></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="text-muted small">Stripe Status</div>
+                        @if (Model.StripeConnected)
+                        {
+                            <div class="h6 mb-0 text-success"><i class="bi bi-check-circle-fill me-1"></i>Connected</div>
+                        }
+                        else
+                        {
+                            <div class="h6 mb-0 text-warning"><i class="bi bi-exclamation-circle me-1"></i>Not Connected</div>
+                        }
+                    </div>
+                    <span class="fs-3 text-secondary"><i class="bi bi-stripe"></i></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Recent Invoices *@
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Invoices</h5>
+        <a asp-controller="Invoices" asp-action="Index" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.RecentInvoices.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-receipt fs-1 d-block mb-2"></i>
+                No invoices yet. <a asp-controller="Invoices" asp-action="Create">Create your first invoice</a>.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Student</th>
+                            <th>Date</th>
+                            <th>Due</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Balance Due</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var inv in Model.RecentInvoices)
+                        {
+                            <tr class="@(inv.IsOverdue ? "table-danger" : "")">
+                                <td class="fw-semibold">@inv.InvoiceNumber</td>
+                                <td>@inv.StudentName</td>
+                                <td>@inv.InvoiceDate.ToLocalTime().ToString("M/d/yyyy")</td>
+                                <td>
+                                    @(inv.DueDate.HasValue ? inv.DueDate.Value.ToLocalTime().ToString("M/d/yyyy") : "—")
+                                    @if (inv.IsOverdue) { <span class="badge bg-danger ms-1">Overdue</span> }
+                                </td>
+                                <td class="text-end">$@inv.TotalAmount.ToString("N2")</td>
+                                <td class="text-end @(inv.BalanceDue > 0 ? "text-danger fw-semibold" : "text-success")">
+                                    $@inv.BalanceDue.ToString("N2")
+                                </td>
+                                <td>
+                                    <span class="badge @StatusBadgeClass(inv.Status)">@inv.Status</span>
+                                </td>
+                                <td>
+                                    <a asp-controller="Invoices" asp-action="Detail" asp-route-id="@inv.Id"
+                                       class="btn btn-sm btn-outline-primary">View</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    string StatusBadgeClass(string status) => status switch
+    {
+        "Paid" => "bg-success",
+        "PartiallyPaid" => "bg-info text-dark",
+        "Sent" => "bg-primary",
+        "Draft" => "bg-secondary",
+        "Void" => "bg-dark",
+        _ => "bg-secondary"
+    };
+}

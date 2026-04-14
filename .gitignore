@@ -1,0 +1,63 @@
+## .NET / Visual Studio
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]uild/
+[Ll]og/
+[Ll]ogs/
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+## Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResults/
+
+## dotCover
+*.dotCover
+
+## Rider
+.idea/
+*.sln.iml
+
+## Secrets — NEVER commit these
+appsettings.Production.json
+appsettings.Secrets.json
+secrets.json
+**/secrets/**
+
+## Local user-specific settings (but keep appsettings.Development.json — it has placeholder values only)
+# appsettings.Development.json  ← intentionally NOT ignored; contains only pk_test_ placeholders
+
+## Entity Framework migrations snapshot — keep migrations but ignore build artifacts
+## (Migrations folder IS committed)
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Azure
+PublishProfiles/

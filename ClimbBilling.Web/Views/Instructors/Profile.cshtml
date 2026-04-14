@@ -1,0 +1,123 @@
+@model InstructorProfileModel
+@{
+    ViewData["Title"] = "My Account";
+}
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-person me-2"></i>Profile</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Profile" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                    <input asp-for="Id" type="hidden" />
+
+                    <div class="mb-3">
+                        <label asp-for="DisplayName" class="form-label fw-semibold">Your Name</label>
+                        <input asp-for="DisplayName" class="form-control" />
+                        <span asp-validation-for="DisplayName" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="BusinessName" class="form-label fw-semibold">Business Name</label>
+                        <input asp-for="BusinessName" class="form-control" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                        <input asp-for="Email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Phone" class="form-label fw-semibold">Phone</label>
+                        <input asp-for="Phone" class="form-control" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        @* Stripe Connect card *@
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Setup</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.StripeOnboardingComplete)
+                {
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
+                        <div>
+                            <div class="fw-semibold">Stripe account connected</div>
+                            <div class="text-muted small">Account: @(Model.StripeConnectAccountId ?? "—")</div>
+                        </div>
+                    </div>
+                    <p class="text-muted small">
+                        Students can pay via credit card or ACH bank transfer. Funds are deposited directly to your bank account.
+                    </p>
+                    <a asp-action="StripeOnboard" class="btn btn-sm btn-outline-secondary">Update Stripe Settings</a>
+                }
+                else
+                {
+                    <p class="text-muted mb-3">
+                        Connect a Stripe account to accept <strong>credit/debit cards</strong> and <strong>ACH bank transfers</strong>
+                        from your students. Stripe deposits funds directly to your bank — typically within 2 business days.
+                    </p>
+                    <div class="alert alert-light border small mb-3">
+                        <strong>Stripe fees:</strong> 2.9% + 30¢ for card &bull; 0.8% (max $5) for ACH bank transfer
+                    </div>
+                    <a asp-action="StripeOnboard" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Connect Stripe Account
+                    </a>
+                }
+            </div>
+        </div>
+
+        @* Subscription card *@
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-star me-2"></i>Platform Subscription</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.SubscriptionStatus == "Active" || Model.SubscriptionStatus == "Trialing")
+                {
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
+                        <div>
+                            <div class="fw-semibold">Subscription active</div>
+                            @if (Model.SubscriptionCurrentPeriodEnd.HasValue)
+                            {
+                                <div class="text-muted small">Renews @Model.SubscriptionCurrentPeriodEnd.Value.ToLocalTime().ToString("MMMM d, yyyy")</div>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (Model.SubscriptionStatus == "PastDue")
+                {
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Subscription payment past due.
+                    </div>
+                    <a asp-action="Subscribe" class="btn btn-warning">Update Payment Method</a>
+                }
+                else
+                {
+                    <p class="text-muted mb-3">
+                        Subscribe for full access to all billing features.
+                    </p>
+                    <a asp-action="Subscribe" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-right me-1"></i>Subscribe
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

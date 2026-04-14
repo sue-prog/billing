@@ -1,0 +1,235 @@
+@model ClimbBilling.Web.Models.ViewModels.InvoiceDetailViewModel
+@{
+    ViewData["Title"] = $"Invoice {Model.InvoiceNumber}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm me-2">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+        <h2 class="h4 d-inline-block mb-0">@Model.InvoiceNumber</h2>
+        <span class="badge @StatusClass(Model.Status) ms-2 fs-6">@Model.Status</span>
+        @if (Model.IsOverdue)
+        {
+            <span class="badge bg-danger ms-1">Overdue</span>
+        }
+    </div>
+
+    <div class="d-flex gap-2">
+        @if (Model.Status != "Void" && Model.Status != "Paid")
+        {
+            <a asp-action="LogPayment" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-cash me-1"></i>Log Payment
+            </a>
+        }
+        @if (Model.Status == "Draft")
+        {
+            <form asp-action="Send" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-primary"
+                        onclick="return confirm('Mark invoice as Sent and generate payment link?');">
+                    <i class="bi bi-send me-1"></i>Send Invoice
+                </button>
+            </form>
+        }
+        @if (Model.Status != "Void" && Model.Status != "Paid")
+        {
+            <form asp-action="Void" asp-route-id="@Model.Id" method="post" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Void this invoice? This cannot be undone.');">
+                    <i class="bi bi-x-circle me-1"></i>Void
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+@* Payment link banner *@
+@if (!string.IsNullOrEmpty(Model.PaymentLinkUrl) && Model.BalanceDue > 0)
+{
+    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-link-45deg fs-4 me-3"></i>
+        <div class="flex-grow-1">
+            <strong>Payment link ready!</strong> Send this to your student to accept card or ACH payment.
+            <div class="mt-1">
+                <a href="@Model.PaymentLinkUrl" target="_blank" class="text-break small">@Model.PaymentLinkUrl</a>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-outline-success ms-3"
+                onclick="navigator.clipboard.writeText('@Model.PaymentLinkUrl'); this.textContent='Copied!';">
+            <i class="bi bi-clipboard me-1"></i>Copy
+        </button>
+    </div>
+}
+else if (Model.StripeConnected && Model.Status == "Sent" && Model.BalanceDue > 0 && string.IsNullOrEmpty(Model.PaymentLinkUrl))
+{
+    <div class="alert alert-warning mb-4">
+        <i class="bi bi-exclamation-circle me-2"></i>Payment link could not be generated.
+        <form asp-action="Send" asp-route-id="@Model.Id" method="post" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-warning ms-2">Retry</button>
+        </form>
+    </div>
+}
+
+<div class="row g-4">
+    @* Invoice card *@
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                @* Header *@
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <div class="fw-bold fs-5">@(Model.InstructorBusinessName ?? Model.InstructorName)</div>
+                        <div class="text-muted small">@Model.InstructorEmail</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="text-muted small">Invoice Date</div>
+                        <div>@Model.InvoiceDate.ToLocalTime().ToString("MMMM d, yyyy")</div>
+                        @if (Model.DueDate.HasValue)
+                        {
+                            <div class="text-muted small mt-1">Due</div>
+                            <div class="@(Model.IsOverdue ? "text-danger fw-semibold" : "")">
+                                @Model.DueDate.Value.ToLocalTime().ToString("MMMM d, yyyy")
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* Bill To *@
+                <div class="mb-4">
+                    <div class="text-muted small text-uppercase fw-semibold mb-1">Bill To</div>
+                    <div class="fw-semibold">@Model.StudentName</div>
+                    <div class="text-muted small">@Model.StudentEmail</div>
+                </div>
+
+                @* Line items *@
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-center">Hours</th>
+                            <th class="text-end">Rate</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var li in Model.LineItems)
+                        {
+                            <tr>
+                                <td>
+                                    @li.Description
+                                    @if (li.ServiceDate.HasValue)
+                                    {
+                                        <div class="text-muted small">@li.ServiceDate.Value.ToLocalTime().ToString("M/d/yyyy")</div>
+                                    }
+                                </td>
+                                <td class="text-center">@li.Quantity.ToString("F1")</td>
+                                <td class="text-end">$@li.UnitPrice.ToString("N2")</td>
+                                <td class="text-end fw-semibold">$@li.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-top">
+                        <tr>
+                            <td colspan="3" class="text-end fw-semibold">Total</td>
+                            <td class="text-end h5 mb-0">$@Model.TotalAmount.ToString("N2")</td>
+                        </tr>
+                        @if (Model.AmountPaid > 0)
+                        {
+                            <tr>
+                                <td colspan="3" class="text-end text-muted">Paid</td>
+                                <td class="text-end text-success">-$@Model.AmountPaid.ToString("N2")</td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-end fw-bold">Balance Due</td>
+                                <td class="text-end h5 @(Model.BalanceDue > 0 ? "text-danger" : "text-success")">
+                                    $@Model.BalanceDue.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tfoot>
+                </table>
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div class="mt-3 p-3 bg-light rounded">
+                        <div class="text-muted small fw-semibold text-uppercase">Notes</div>
+                        <div>@Model.Notes</div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* Payment history sidebar *@
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Payment History</h6>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.Payments.Any())
+                {
+                    <div class="text-center py-4 text-muted small">No payments recorded.</div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var p in Model.Payments)
+                        {
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <div class="fw-semibold">$@p.Amount.ToString("N2")</div>
+                                        <div class="text-muted small">
+                                            @p.Method @(p.IsManual ? "(manual)" : "")
+                                            &bull; @p.PaymentDate.ToLocalTime().ToString("M/d/yyyy")
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(p.Notes))
+                                        {
+                                            <div class="text-muted small fst-italic">@p.Notes</div>
+                                        }
+                                    </div>
+                                    <span class="badge @PaymentStatusClass(p.Status) align-self-start">@p.Status</span>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        @if (Model.Status != "Void" && Model.Status != "Paid")
+        {
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-cash me-2"></i>Record Manual Payment</h6>
+                </div>
+                <div class="card-body text-muted small">
+                    For cash, Venmo, Zelle, check, or any payment received outside of Stripe.
+                    <a asp-action="LogPayment" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-success d-block mt-2">
+                        Log Payment
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    string StatusClass(string s) => s switch {
+        "Paid" => "bg-success",
+        "PartiallyPaid" => "bg-info text-dark",
+        "Sent" => "bg-primary",
+        "Draft" => "bg-secondary",
+        "Void" => "bg-dark",
+        _ => "bg-secondary"
+    };
+    string PaymentStatusClass(string s) => s switch {
+        "Completed" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Failed" => "bg-danger",
+        "Refunded" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}
