@@ -14,24 +14,31 @@
             <div class="card-body">
                 <div class="alert alert-info small mb-3">
                     <i class="bi bi-info-circle me-1"></i>
-                    <strong>Development mode.</strong> In production, sign in through the Climb TMS.
+                    <strong>Development / demo mode.</strong> Pre-filled with demo data.
+                    In production, sign in through the Climb TMS.
                 </div>
                 <form asp-action="Login" method="post">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Email</label>
-                        <input name="email" type="email" class="form-control" placeholder="you@example.com" required />
+                        <input name="email" type="email" class="form-control"
+                               value="demo@climbaviation.com" required />
+                        <div class="form-text">Pre-filled — matches the seeded demo instructor.</div>
                     </div>
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Display Name</label>
-                        <input name="name" type="text" class="form-control" placeholder="John Smith" />
+                        <input name="name" type="text" class="form-control"
+                               value="Sarah Mitchell" />
                     </div>
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>Sign In as Demo Instructor
                         </button>
                     </div>
                 </form>
             </div>
+        </div>
+        <div class="text-center mt-3 small text-muted">
+            Demo data: Sarah Mitchell &bull; 4 students &bull; 6 invoices &bull; multiple payment methods
         </div>
     </div>
 </div>
